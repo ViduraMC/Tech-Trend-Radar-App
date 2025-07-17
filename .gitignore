@@ -1,0 +1,200 @@
+# =========== Operating System Files ===========
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msm
+*.msp
+
+# Linux
+*~
+
+# =========== IDEs and Editors ===========
+# VS Code
+.vscode/
+.history/
+*.code-workspace
+
+# JetBrains IDEs (IntelliJ, PyCharm, WebStorm, etc.)
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# Eclipse
+.classpath
+.project
+.settings/
+bin/
+
+# NetBeans
+nbproject/private/
+build/
+nbbuild/
+dist/
+nbdist/
+.nb-gradle/
+
+# Sublime Text
+*.sublime-workspace
+*.sublime-project
+
+# =========== Programming Languages ===========
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.env
+.env.*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+pip-wheel-metadata/
+.env
+.venv/
+venv/
+
+# Java
+*.class
+*.jar
+*.war
+*.ear
+*.log
+hs_err_pid*
+*.jks
+*.keystore
+
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+
+# Gradle
+.gradle/
+build/
+
+# C/C++
+*.obj
+*.exe
+*.dll
+*.pdb
+*.lib
+*.out
+*.app
+
+# Rust
+/target/
+**/*.rs.bk
+
+# Go
+/bin/
+/vendor/
+*.test
+
+# PHP
+vendor/
+composer.lock
+
+# .NET
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Ruby
+*.gem
+*.rbc
+.bundle/
+vendor/bundle/
+log/
+tmp/
+
+# =========== Logs & Databases ===========
+*.log
+logs/
+*.sqlite
+*.sqlite3
+*.db
+*.pid
+
+# =========== Misc ===========
+*.swp
+*.tmp
+*.bak
+*.old
+*.orig
+
+# =========== Build & Dependency folders ===========
+bower_components/
+jspm_packages/
+dist/
+build/
+release/
+tmp/
+temp/
+
+# =========== Others ===========
+!.gitignore
+coverage/
+.cache/
+.cache-loader/
+.next/
+.nuxt/
+out/
+firebase-debug.log
+firebase-error.log
+
+# =========== Images & Media ===========
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.psd
+*.ai
+*.svg
+*.ico
+
+# =========== Test & Coverage ===========
+coverage/
+.nyc_output/
+cypress/screenshots/
+cypress/videos/
+
+# =========== Docker ===========
+*.pid
+*.seed
+*.pid.lock
+
+# =========== Environment Files ===========
+.env
+.env.*
+.envrc
+.env.local
+.env.*.local
+
+# =========== Custom ===========
+# Add project-specific ignores below
+# eg: secrets.json
+# secrets.json
