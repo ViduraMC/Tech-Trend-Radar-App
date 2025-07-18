@@ -122,40 +122,44 @@ TECHNOLOGY_CATEGORIES = {
     ]
 }
 
-# Data sources configuration
-DATA_SOURCES = {
+# Real Data Sources Configuration
+REAL_DATA_SOURCES = {
     "github": {
         "enabled": True,
-        "api_url": "https://api.github.com",
         "rate_limit": 5000,  # requests per hour
-        "endpoints": {
-            "repositories": "/search/repositories",
-            "issues": "/search/issues",
-            "commits": "/search/commits"
-        }
-    },
-    "arxiv": {
-        "enabled": True,
-        "api_url": "http://export.arxiv.org/api/query",
-        "rate_limit": 1000,  # requests per day
-        "categories": [
-            "cs.AI", "cs.LG", "cs.CV", "cs.CL", "cs.CR",
-            "cs.DB", "cs.DC", "cs.SE", "cs.SY"
+        "collection_interval": 3600,  # 1 hour
+        "topics": [
+            "machine-learning", "artificial-intelligence", "deep-learning",
+            "react", "vue", "angular", "python", "javascript", "typescript",
+            "docker", "kubernetes", "aws", "azure", "gcp", "blockchain",
+            "flutter", "react-native", "mobile", "data-science", "devops"
         ]
     },
+    "arxiv": {
+        "enabled": False,  # Enable when you have API access
+        "categories": ["cs.AI", "cs.LG", "cs.CV", "cs.NE", "cs.CR", "cs.DC"],
+        "collection_interval": 86400  # 24 hours
+    },
     "patents": {
-        "enabled": True,
-        "api_url": "https://patents.googleapis.com/v1/patents",
-        "rate_limit": 1000,  # requests per day
+        "enabled": False,  # Enable when you have API access
+        "collection_interval": 86400  # 24 hours
     },
-    "job_boards": {
-        "enabled": True,
-        "sources": ["indeed", "stackoverflow", "linkedin"],
-        "rate_limit": 500  # requests per hour
-    },
-    "social_media": {
-        "enabled": False,  # Disabled by default due to API restrictions
-        "sources": ["twitter", "reddit", "hackernews"],
-        "rate_limit": 100  # requests per hour
+    "job_postings": {
+        "enabled": False,  # Enable when you have API access
+        "collection_interval": 3600  # 1 hour
+    }
+}
+
+# Data Collection Settings
+COLLECTION_SETTINGS = {
+    "max_technologies_per_category": 50,
+    "min_stars_threshold": 100,  # Minimum GitHub stars to consider
+    "trend_score_weight": {
+        "github_stars": 0.3,
+        "github_forks": 0.2,
+        "github_issues": 0.1,
+        "arxiv_papers": 0.2,
+        "patent_filings": 0.1,
+        "job_postings": 0.1
     }
 } 

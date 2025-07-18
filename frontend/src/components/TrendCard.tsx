@@ -17,11 +17,19 @@ interface TrendData {
   adoption_score: number;
 }
 
-interface TrendCardProps {
-  trend: TrendData;
+interface Technology {
+  id: number;
+  name: string;
+  category: string;
+  description: string;
 }
 
-const TrendCard: React.FC<TrendCardProps> = ({ trend }) => {
+interface TrendCardProps {
+  trend: TrendData;
+  technology?: Technology; // Make it optional for backward compatibility
+}
+
+const TrendCard: React.FC<TrendCardProps> = ({ trend, technology }) => {
   const getTrendScoreColor = (score: number) => {
     if (score >= 0.8) return 'text-green-600 bg-green-100';
     if (score >= 0.6) return 'text-yellow-600 bg-yellow-100';
@@ -36,16 +44,24 @@ const TrendCard: React.FC<TrendCardProps> = ({ trend }) => {
     return 'Very Low';
   };
 
+  // Display technology name if available, otherwise fallback to ID
+  const displayName = technology ? technology.name : `Technology #${trend.technology_id}`;
+
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-            <span className="text-blue-600 font-semibold">T</span>
+            <span className="text-blue-600 font-semibold">
+              {technology ? technology.name.charAt(0).toUpperCase() : 'T'}
+            </span>
           </div>
           <div>
-            <h3 className="font-semibold text-gray-900">Technology #{trend.technology_id}</h3>
-            <p className="text-sm text-gray-500">{new Date(trend.date).toLocaleDateString()}</p>
+            <h3 className="font-semibold text-gray-900">{displayName}</h3>
+            <p className="text-sm text-gray-500">
+              {technology && <span className="text-blue-600 mr-2">{technology.category}</span>}
+              {new Date(trend.date).toLocaleDateString()}
+            </p>
           </div>
         </div>
         <div className={`px-3 py-1 rounded-full text-sm font-medium ${getTrendScoreColor(trend.trend_score)}`}>
