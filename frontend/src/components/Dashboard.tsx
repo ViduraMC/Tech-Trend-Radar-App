@@ -61,7 +61,7 @@ const Dashboard: React.FC = () => {
     try {
       setLoading(true);
       const [techResponse, trendsResponse, predictionsResponse] = await Promise.all([
-        axios.get('http://localhost:8000/api/technologies/'),
+        axios.get('http://localhost:8000/api/technologies/?limit=1000'),
         axios.get('http://localhost:8000/api/trends/'),
         axios.get('http://localhost:8000/api/predictions/')
       ]);

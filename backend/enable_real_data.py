@@ -16,6 +16,16 @@ import json
 # Add current directory to path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    print("⚠️  python-dotenv not installed. Installing...")
+    os.system("pip install python-dotenv")
+    from dotenv import load_dotenv
+    load_dotenv()
+
 from data_collectors.github_collector import GitHubCollector, run_github_collection
 from models.database import get_db_sync, Technology, TrendData
 from config import REAL_DATA_SOURCES, COLLECTION_SETTINGS
@@ -69,19 +79,20 @@ async def collect_real_github_data():
         async with GitHubCollector() as collector:
             print("📊 Collecting technology trends from GitHub...")
             
-            # Collect data for each technology category
-            for category, keywords in REAL_DATA_SOURCES["github"]["topics"]:
-                print(f"🔍 Searching for {category} technologies...")
+            # Collect data for each technology topic
+            topics = REAL_DATA_SOURCES["github"]["topics"]
+            for topic in topics:
+                print(f"🔍 Searching for {topic} technologies...")
                 
-                # Search for repositories in this category
+                # Search for repositories in this topic
                 repos = await collector.search_repositories(
-                    query=f"topic:{category} stars:>100",
+                    query=f"topic:{topic} stars:>100",
                     sort="stars",
                     order="desc",
                     per_page=20
                 )
                 
-                print(f"✅ Found {len(repos)} repositories for {category}")
+                print(f"✅ Found {len(repos)} repositories for {topic}")
                 
                 # Process each repository
                 for repo in repos:
@@ -130,7 +141,7 @@ async def collect_real_github_data():
                         print(f"  ❌ Error processing {repo.name}: {e}")
                         continue
                 
-                # Rate limiting - wait between categories
+                # Rate limiting - wait between topics
                 await asyncio.sleep(2)
         
         print("🎉 Real data collection completed!")
