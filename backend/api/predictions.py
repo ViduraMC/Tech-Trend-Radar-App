@@ -60,12 +60,17 @@ async def get_predictions_list(
 ):
     """Get list of predictions for frontend"""
     try:
-        # Get recent predictions
-        predictions_query = db.query(Prediction).order_by(
-            Prediction.prediction_date.desc()
-        ).limit(limit)
+        # Get comparison predictions first, then time series predictions
+        comparison_predictions = db.query(Prediction).filter(
+            Prediction.model_used.in_(['comparison_model', 'fallback_model'])
+        ).order_by(Prediction.prediction_date.desc()).limit(limit // 2).all()
         
-        predictions = predictions_query.all()
+        remaining_limit = limit - len(comparison_predictions)
+        time_series_predictions = db.query(Prediction).filter(
+            Prediction.model_used == 'time_series_ml_model'
+        ).order_by(Prediction.prediction_date.desc()).limit(remaining_limit).all()
+        
+        predictions = comparison_predictions + time_series_predictions
         
         # Convert to response format
         prediction_responses = []

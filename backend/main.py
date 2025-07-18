@@ -15,6 +15,7 @@ from data_collectors.github_collector import GitHubCollector
 from models.database import init_database, get_db
 from config import settings
 from ml_models.model_manager import ModelManager
+from background_tasks import start_background_tasks, stop_background_tasks, get_task_status
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -42,13 +43,14 @@ async def lifespan(app: FastAPI):
         logger.warning(f"⚠️ Error loading ML models: {e}")
     
     # Start background data collection
-    # This would typically be handled by Celery in production
     logger.info("🔄 Starting data collection services...")
+    start_background_tasks()
     
     yield
     
     # Shutdown
     logger.info("🛑 Shutting down Tech Trend Radar API...")
+    stop_background_tasks()
 
 # Create FastAPI app
 app = FastAPI(
@@ -103,17 +105,47 @@ async def health_check():
 async def get_system_stats(db=Depends(get_db)):
     """Get system statistics"""
     try:
-        # This would query the database for actual stats
+        from models.database import Technology, TrendData, Prediction
+        
+        total_technologies = db.query(Technology).count()
+        total_trends = db.query(TrendData).count()
+        total_predictions = db.query(Prediction).count()
+        
+        # Get background task status
+        task_status = get_task_status()
+        
         return {
-            "total_technologies": 1250,
-            "active_trends": 89,
-            "predictions_made": 567,
+            "total_technologies": total_technologies,
+            "active_trends": total_trends,
+            "predictions_made": total_predictions,
             "data_sources": 5,
-            "last_update": datetime.utcnow().isoformat()
+            "last_update": datetime.utcnow().isoformat(),
+            "background_tasks": task_status
         }
     except Exception as e:
         logger.error(f"Error getting system stats: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
+
+@app.post("/api/collect-data", response_model=dict)
+async def trigger_data_collection():
+    """Manually trigger data collection"""
+    try:
+        import asyncio
+        from data_collectors.github_collector import run_github_collection
+        
+        logger.info("🔄 Manual data collection triggered...")
+        
+        # Run GitHub collection
+        results = await run_github_collection()
+        
+        return {
+            "message": "Data collection completed successfully",
+            "results": results,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error in manual data collection: {e}")
+        raise HTTPException(status_code=500, detail=f"Data collection failed: {str(e)}")
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
