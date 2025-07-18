@@ -14,10 +14,14 @@ from api.analytics import router as analytics_router
 from data_collectors.github_collector import GitHubCollector
 from models.database import init_database, get_db
 from config import settings
+from ml_models.model_manager import ModelManager
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Initialize model manager globally
+model_manager = ModelManager()
 
 # Application lifespan management
 @asynccontextmanager
@@ -26,6 +30,16 @@ async def lifespan(app: FastAPI):
     logger.info("🚀 Starting Tech Trend Radar API...")
     await init_database()
     logger.info("✅ Database initialized")
+    
+    # Try to load ML models
+    logger.info("🤖 Loading ML models...")
+    try:
+        if model_manager.load_models():
+            logger.info("✅ ML models loaded successfully")
+        else:
+            logger.info("⚠️ No pre-trained ML models found")
+    except Exception as e:
+        logger.warning(f"⚠️ Error loading ML models: {e}")
     
     # Start background data collection
     # This would typically be handled by Celery in production

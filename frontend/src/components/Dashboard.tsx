@@ -144,9 +144,17 @@ const Dashboard: React.FC = () => {
             <div className="card">
               <h2 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#111827', marginBottom: '1rem' }}>Technology Trends</h2>
               <div>
-                {trends.slice(0, 5).map((trend) => (
-                  <TrendCard key={trend.id} trend={trend} />
-                ))}
+                {trends.slice(0, 5).map((trend) => {
+                  // Find the corresponding technology for this trend
+                  const technology = technologies.find(tech => tech.id === trend.technology_id);
+                  return (
+                    <TrendCard 
+                      key={trend.id} 
+                      trend={trend} 
+                      technology={technology}
+                    />
+                  );
+                })}
               </div>
             </div>
           </div>

@@ -6,8 +6,12 @@ from pydantic import BaseModel, Field
 
 from models.database import get_db, Technology, Prediction, TrendData
 from config import settings
+from ml_models.model_manager import ModelManager
 
 router = APIRouter()
+
+# Initialize model manager
+model_manager = ModelManager()
 
 # Pydantic models
 class PredictionResponse(BaseModel):
@@ -215,63 +219,126 @@ async def generate_prediction(
     target_days: int = Query(default=90, ge=1, le=365),
     db: Session = Depends(get_db)
 ):
-    """Generate a new prediction for a technology"""
+    """Generate a new prediction for a technology using ML models"""
     try:
         # Get technology
         technology = db.query(Technology).filter(Technology.id == tech_id).first()
         if not technology:
             raise HTTPException(status_code=404, detail="Technology not found")
         
-        # Get historical trend data
-        historical_data = db.query(TrendData).filter(
+        # Get latest trend data
+        latest_trend = db.query(TrendData).filter(
             TrendData.technology_id == tech_id
-        ).order_by(TrendData.date.desc()).limit(30).all()
+        ).order_by(TrendData.date.desc()).first()
         
-        if not historical_data:
-            raise HTTPException(status_code=400, detail="Insufficient historical data for prediction")
+        if not latest_trend:
+            raise HTTPException(status_code=400, detail="No trend data available for prediction")
         
-        # Simple prediction logic (in reality, this would use ML models)
-        recent_trends = [data.trend_score for data in historical_data[:7]]
-        avg_recent_trend = sum(recent_trends) / len(recent_trends) if recent_trends else 0.0
-        
-        # Calculate trend momentum
-        if len(historical_data) >= 14:
-            older_trends = [data.trend_score for data in historical_data[7:14]]
-            avg_older_trend = sum(older_trends) / len(older_trends) if older_trends else 0.0
-            momentum = avg_recent_trend - avg_older_trend
-        else:
-            momentum = 0.0
-        
-        # Generate prediction values
-        adoption_probability = min(max(avg_recent_trend + (momentum * 0.1), 0.0), 1.0)
-        market_impact_score = min(max(avg_recent_trend * 1.2, 0.0), 1.0)
-        risk_score = max(0.1, 1.0 - adoption_probability)
-        confidence_interval = min(0.9, 0.5 + (len(historical_data) / 100))
-        
-        # Create prediction
-        target_date = datetime.utcnow() + timedelta(days=target_days)
-        
-        prediction = Prediction(
-            technology_id=tech_id,
-            target_date=target_date,
-            adoption_probability=adoption_probability,
-            market_impact_score=market_impact_score,
-            risk_score=risk_score,
-            confidence_interval=confidence_interval,
-            model_used="simple_trend_analysis",
-            features_used=["trend_score", "momentum", "historical_data"],
-            prediction_reasoning=f"Based on {len(historical_data)} historical data points. "
-                               f"Recent trend: {avg_recent_trend:.3f}, Momentum: {momentum:.3f}"
-        )
-        
-        db.add(prediction)
-        db.commit()
-        db.refresh(prediction)
-        
-        return {
-            "message": "Prediction generated successfully",
-            "prediction": PredictionResponse.from_orm(prediction)
+        # Prepare technology data for ML prediction
+        technology_data = {
+            'name': technology.name,
+            'category': technology.category,
+            'description': technology.description or '',
+            'keywords': technology.keywords or [],
+            'trend_score': latest_trend.trend_score,
+            'github_stars': latest_trend.github_stars,
+            'github_forks': latest_trend.github_forks,
+            'github_issues': latest_trend.github_issues,
+            'arxiv_papers': latest_trend.arxiv_papers,
+            'patent_filings': latest_trend.patent_filings,
+            'job_postings': latest_trend.job_postings,
+            'social_mentions': latest_trend.social_mentions,
+            'momentum_score': latest_trend.momentum_score,
+            'adoption_score': latest_trend.adoption_score
         }
+        
+        # Try to use ML models if available
+        try:
+            if model_manager.is_initialized:
+                # Use ML model for prediction
+                ml_prediction = model_manager.predict_technology(technology_data)
+                
+                # Create prediction record
+                target_date = datetime.utcnow() + timedelta(days=target_days)
+                
+                prediction = Prediction(
+                    technology_id=tech_id,
+                    target_date=target_date,
+                    adoption_probability=ml_prediction['predictions'].get('adoption_probability', 0.5),
+                    market_impact_score=ml_prediction['predictions'].get('market_impact_score', 0.5),
+                    risk_score=ml_prediction['predictions'].get('risk_score', 0.5),
+                    confidence_interval=ml_prediction['confidence'].get('overall', 0.5),
+                    model_used="ensemble_ml_model",
+                    features_used=["trend_score", "github_stars", "github_forks", "github_issues", 
+                                 "arxiv_papers", "patent_filings", "job_postings", "social_mentions"],
+                    prediction_reasoning='; '.join(ml_prediction.get('recommendations', []))
+                )
+                
+                db.add(prediction)
+                db.commit()
+                db.refresh(prediction)
+                
+                return {
+                    "message": "ML prediction generated successfully",
+                    "prediction": PredictionResponse.from_orm(prediction),
+                    "ml_insights": {
+                        "confidence": ml_prediction['confidence'],
+                        "recommendations": ml_prediction['recommendations']
+                    }
+                }
+            else:
+                # Fallback to simple prediction
+                raise ValueError("ML models not initialized")
+                
+        except Exception as ml_error:
+            logger.warning(f"ML prediction failed, using fallback: {ml_error}")
+            
+            # Fallback to simple prediction logic
+            historical_data = db.query(TrendData).filter(
+                TrendData.technology_id == tech_id
+            ).order_by(TrendData.date.desc()).limit(30).all()
+            
+            recent_trends = [data.trend_score for data in historical_data[:7]]
+            avg_recent_trend = sum(recent_trends) / len(recent_trends) if recent_trends else 0.0
+            
+            # Calculate trend momentum
+            if len(historical_data) >= 14:
+                older_trends = [data.trend_score for data in historical_data[7:14]]
+                avg_older_trend = sum(older_trends) / len(older_trends) if older_trends else 0.0
+                momentum = avg_recent_trend - avg_older_trend
+            else:
+                momentum = 0.0
+            
+            # Generate prediction values
+            adoption_probability = min(max(avg_recent_trend + (momentum * 0.1), 0.0), 1.0)
+            market_impact_score = min(max(avg_recent_trend * 1.2, 0.0), 1.0)
+            risk_score = max(0.1, 1.0 - adoption_probability)
+            confidence_interval = min(0.9, 0.5 + (len(historical_data) / 100))
+            
+            # Create prediction
+            target_date = datetime.utcnow() + timedelta(days=target_days)
+            
+            prediction = Prediction(
+                technology_id=tech_id,
+                target_date=target_date,
+                adoption_probability=adoption_probability,
+                market_impact_score=market_impact_score,
+                risk_score=risk_score,
+                confidence_interval=confidence_interval,
+                model_used="simple_trend_analysis",
+                features_used=["trend_score", "momentum", "historical_data"],
+                prediction_reasoning=f"Based on {len(historical_data)} historical data points. "
+                                   f"Recent trend: {avg_recent_trend:.3f}, Momentum: {momentum:.3f}"
+            )
+            
+            db.add(prediction)
+            db.commit()
+            db.refresh(prediction)
+            
+            return {
+                "message": "Fallback prediction generated successfully",
+                "prediction": PredictionResponse.from_orm(prediction)
+            }
         
     except HTTPException:
         raise
@@ -390,4 +457,53 @@ async def get_prediction_accuracy(db: Session = Depends(get_db)):
         }
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching prediction accuracy: {str(e)}") 
+        raise HTTPException(status_code=500, detail=f"Error fetching prediction accuracy: {str(e)}")
+
+@router.post("/ml/initialize")
+async def initialize_ml_models(db: Session = Depends(get_db)):
+    """Initialize and train ML models"""
+    try:
+        result = model_manager.initialize_models(db)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error initializing ML models: {str(e)}")
+
+@router.get("/ml/status")
+async def get_ml_model_status():
+    """Get ML model status"""
+    try:
+        return model_manager.get_model_status()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting ML model status: {str(e)}")
+
+@router.post("/ml/retrain")
+async def retrain_ml_models(db: Session = Depends(get_db)):
+    """Retrain ML models with fresh data"""
+    try:
+        result = model_manager.retrain_models(db)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retraining ML models: {str(e)}")
+
+@router.post("/ml/predict")
+async def predict_with_ml(
+    technology_data: Dict[str, Any],
+    db: Session = Depends(get_db)
+):
+    """Make ML prediction for a technology"""
+    try:
+        if not model_manager.is_initialized:
+            raise HTTPException(status_code=400, detail="ML models not initialized")
+        
+        prediction = model_manager.predict_technology(technology_data)
+        return prediction
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error making ML prediction: {str(e)}")
+
+@router.get("/ml/feature-importance")
+async def get_feature_importance(model_name: str = None):
+    """Get feature importance for ML models"""
+    try:
+        return model_manager.get_feature_importance(model_name)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting feature importance: {str(e)}") 
